@@ -1,26 +1,23 @@
 import React from 'react';
-import { marked } from 'marked';
+import ReactMarkdown from 'react-markdown';
 
-const Preview = ({ text }) => {
-  // Logic to convert text to HTML
-  const renderMarkdown = () => {
-    return { __html: marked.parse(text) };
-  };
-
+// Use React.forwardRef to allow the parent (EditorPage) to get a ref to the div for PDF generation
+const Preview = React.forwardRef(({ markdown, onCopy }, ref) => {
   return (
-    <div className="flex flex-col h-full bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-      <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
-        <span className="text-xs font-bold text-slate-500 uppercase">Live Preview</span>
-      </div>
-      <div className="flex-1 p-6 overflow-y-auto">
-        {/* 'prose' class from Tailwind Typography plugin makes this look like a real document */}
-        <article 
-          className="prose prose-slate max-w-none"
-          dangerouslySetInnerHTML={renderMarkdown()} 
-        />
-      </div>
+    <div 
+      className="flex-1 h-full p-8 overflow-y-auto bg-white prose prose-slate max-w-none"
+      ref={ref} 
+      onCopy={onCopy}
+    >
+      {markdown ? (
+        <ReactMarkdown>{markdown}</ReactMarkdown>
+      ) : (
+        <p className="text-gray-300 italic">Select a note to see the preview...</p>
+      )}
     </div>
   );
-};
+});
+
+Preview.displayName = "Preview"; // Good practice when using forwardRef
 
 export default Preview;

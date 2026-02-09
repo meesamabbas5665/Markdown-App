@@ -1,48 +1,56 @@
-import React, { useState } from "react";
-import Editor from "../Components/Editor";   // Corrected Path
-import Preview from "../Components/Preview"; // Corrected Path
+import React, { useState, useRef } from 'react';
+import API from '../api';
+import html2pdf from 'html2pdf.js';
+import ReactMarkdown from 'react-markdown';
 
-const EditorPage = () => {
-  const [text, setText] = useState("# My New Document\nEdit this text to see the preview.");
+function EditorPage({ notes, setNotes, activeNoteId }) {
+    const [previewMarkdown, setPreviewMarkdown] = useState("");
+    const [prevId, setPrevId] = useState(null);
+    const previewRef = useRef();
+    const isLoggedIn = !!localStorage.getItem('token');
 
-  const handleDownload = () => {
-    if (text.length > 30000) {
-      alert("Page limit exceeded! Please reduce content to under 10 pages.");
-      return;
+    const activeNote = notes.find((n) => n.id === activeNoteId);
+
+    // Sync state during render to avoid useEffect errors
+    if (activeNoteId !== prevId) {
+        setPrevId(activeNoteId);
+        setPreviewMarkdown(activeNote?.content ?? "");
     }
-    console.log("Exporting to local machine...");
-    // Future Node.js integration point
-  };
 
-  return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
-      {/* Top Navigation Frame */}
-      <nav className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold">M</div>
-          <h1 className="text-lg font-semibold text-slate-800 tracking-tight">MarkdownFlow</h1>
+    const handleSave = async (content) => {
+        setPreviewMarkdown(content);
+        if (!isLoggedIn || !activeNoteId) return;
+        try {
+            await API.put(`/notes/${activeNoteId}`, { content });
+            const updatedNotes = notes.map(n => n.id === activeNoteId ? { ...n, content } : n);
+            setNotes(updatedNotes);
+        } catch (error) {
+            console.error("Save failed");
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full w-full bg-white">
+            <div className="p-3 border-b flex justify-end bg-slate-100">
+                <button 
+                    onClick={() => html2pdf().from(previewRef.current).save()}
+                    className="bg-blue-600 text-white px-4 py-2 rounded shadow"
+                >
+                    Download PDF
+                </button>
+            </div>
+            <div className="flex flex-1 overflow-hidden">
+                <textarea
+                    className="w-1/2 p-6 outline-none border-r resize-none font-mono"
+                    value={previewMarkdown}
+                    onChange={(e) => handleSave(e.target.value)}
+                />
+                <div ref={previewRef} className="w-1/2 p-8 overflow-auto prose max-w-none bg-slate-50">
+                    <ReactMarkdown>{previewMarkdown}</ReactMarkdown>
+                </div>
+            </div>
         </div>
-        <button 
-          onClick={handleDownload}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
-        >
-          Download (Max 10 Pages)
-        </button>
-      </nav>
-
-      {/* Main Workspace Frame */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 lg:p-6 overflow-hidden max-w-[1600px] mx-auto w-full">
-        <Editor text={text} setText={setText} />
-        <Preview text={text} />
-      </div>
-
-      {/* Footer Status Frame */}
-      <footer className="bg-white border-t border-slate-200 px-6 py-2 text-[10px] text-slate-400 flex justify-between">
-        <span>Frontend Frame Ready</span>
-        <span>Draft Autosaved Locally</span>
-      </footer>
-    </div>
-  );
-};
+    );
+}
 
 export default EditorPage;

@@ -1,82 +1,100 @@
-import React, { useState } from 'react';
-import Header from './Components/Header';
-import Sidebar from './Components/Sidebar'; 
-import Toolbar from './Components/Toolbar';
-import LoginPage from './Pages/LoginPage';
-import RegisterPage from './Pages/RegisterPage';
-import ProfilePage from './Pages/ProfilePage';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import API from './api';
+
+// Pages & Components
 import EditorPage from './Pages/EditorPage';
+import RegisterPage from './Pages/RegisterPage';
+import LoginPage from './Pages/LoginPage';
+import Header from './Components/Header';
+import Sidebar from './Components/Sidebar';
+import Footer from './Components/Footer';
+
 function App() {
+    const [notes, setNotes] = useState([]);
+    const [activeNoteId, setActiveNoteId] = useState(null);
+    const [isLoginOpen, setIsLoginOpen] = useState(false);
+    
+    const location = useLocation();
+    const isLoggedIn = !!localStorage.getItem('token');
 
-  const [notes, setNotes] = useState([
-    { id: 1, title: "Backend Setup", content: "# Backend Setup\nConnecting to MySQL..." },
-    { id: 2, title: "Frontend Logic", content: "# Frontend Logic\nReact components..." }
-  ]);
-  
-  const [activeNoteId, setActiveNoteId] = useState(1);
-  const activeNote = notes.find((note) => note.id === activeNoteId);
+    // Visibility Logic
+    const isRegisterPage = location.pathname === "/register";
+    const isHomePage = location.pathname === "/";
+    const showHeader = !isRegisterPage && !isLoginOpen;
+    // SIDEBAR: Shows only on Home page IF user is logged in
+    const showSidebar = isHomePage && isLoggedIn;
+    const showFooter = !isRegisterPage;
 
-  const getNoteTitle = (content) => {
-    const firstLine = content.split('\n')[0];
-    return firstLine.replace(/[#*`]/g, '').trim().substring(0, 30);
-  };
+    useEffect(() => {
+        if (isLoggedIn) {
+            fetchNotes();
+        }
+    }, [isLoggedIn]);
 
-  const onUpdateNote = (newContent) => {
-    const updatedNotes = notes.map((note) => {
-      if (note.id === activeNoteId) {
-        return {
-          ...note,
-          content: newContent,
-          title: getNoteTitle(newContent) 
-        };
-      }
-      return note;
-    });
-    setNotes(updatedNotes);
-  };
-
-  const onAddNote = () => {
-    const newNote = {
-      id: Date.now(), // Temporary ID until Backend gives a real ID
-      title: "New Document",
-      content: "# New Document"
+    const fetchNotes = async () => {
+        try {
+            const res = await API.get('/notes');
+            setNotes(res.data);
+            // Default to selecting the first note from database
+            if (res.data.length > 0 && !activeNoteId) setActiveNoteId(res.data[0].id);
+        } catch (err) {
+            console.error("Database fetch failed");
+        }
     };
-    setNotes([newNote, ...notes]);
-    setActiveNoteId(newNote.id);
-  };
 
-  return (
-    <div className="h-screen flex flex-col bg-slate-50 text-slate-900">
-      <Header />
-        <Toolbar/>
-      
-      <div className="flex flex-1 overflow-hidden">
-        
-        {/* HERE WE USE THE SIDEBAR COMPONENT */}
-        <Sidebar 
-          notes={notes} 
-          activeNoteId={activeNoteId} 
-          onSelectNote={setActiveNoteId} 
-          onAddNote={onAddNote}
-        />
+    const handleAddNote = async () => {
+        try {
+            const res = await API.post('/notes', { title: "New Document", content: "" });
+            setNotes([res.data, ...notes]); // Add to top of list
+            setActiveNoteId(res.data.id); // Switch to new note
+        } catch (err) {
+            alert("Error creating note");
+        }
+    };
 
+    return (
+        <div className="flex flex-col h-screen w-full bg-white overflow-hidden relative">
+            {/* LOGIN OVERLAY */}
+            <LoginPage isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
-        {/* Editor Area */}
-        <main className="flex-1 p-6 overflow-auto">
-          <textarea 
-            className="w-full h-full p-6 text-lg border border-slate-200 focus:outline-none resize-none"
-            value={activeNote ? activeNote.content : ""}
-            onChange={(e) => onUpdateNote(e.target.value)}
-            placeholder="Start typing..."
-          />
-        </main>
-      </div>
-        <LoginPage/>
-        <RegisterPage/>
-        {/* <ProfilePage/> */}
-        <EditorPage/> 
-    </div>
-  );
+            {/* HEADER */}
+            {showHeader && <Header onLoginClick={() => setIsLoginOpen(true)} />}
+
+            {/* MAIN LAYOUT WRAPPER (SIDEBAR + MAIN CONTENT) */}
+            <div className="flex flex-1 overflow-hidden">
+                
+                {/* 1. SIDEBAR ADDED HERE */}
+                {showSidebar && (
+                    <Sidebar 
+                        notes={notes} 
+                        activeNoteId={activeNoteId} 
+                        setActiveNoteId={setActiveNoteId} 
+                        onAddNote={handleAddNote} 
+                    />
+                )}
+                
+                {/* 2. MAIN CONTENT AREA */}
+                <main className={`flex-1 flex flex-col overflow-hidden bg-slate-50 transition-all ${isLoginOpen ? 'blur-md pointer-events-none' : ''}`}>
+                    <div className="flex-1 overflow-y-auto">
+                        <Routes>
+                            <Route path="/" element={
+                                <EditorPage 
+                                    notes={notes} 
+                                    setNotes={setNotes} 
+                                    activeNoteId={activeNoteId} 
+                                />
+                            } />
+                            <Route path="/register" element={<RegisterPage openLogin={() => setIsLoginOpen(true)} />} />
+                        </Routes>
+                    </div>
+                    
+                    {/* FOOTER: Now stays at the bottom of the content area */}
+                    {showFooter && <Footer />}
+                </main>
+            </div>
+        </div>
+    );
 }
 
 export default App;

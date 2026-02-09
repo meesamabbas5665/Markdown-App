@@ -1,31 +1,21 @@
 import React from 'react';
 
-const Editor = ({ text, setText }) => {
-  const CHAR_LIMIT = 30000; // 10 pages approx
-  const progress = (text.length / CHAR_LIMIT) * 100;
-
+const Editor = ({ value, onChange, onPaste, wordCount, wordLimit }) => {
   return (
-    <div className="flex flex-col h-full bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-      <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-        <span className="text-xs font-bold text-slate-500 uppercase">Markdown Editor</span>
-        <span className={`text-xs ${text.length > CHAR_LIMIT ? 'text-red-500' : 'text-slate-400'}`}>
-          {text.length} / {CHAR_LIMIT} characters
-        </span>
-      </div>
-      
+    <div className="flex-1 flex flex-col border-r border-gray-200 h-full bg-white">
       <textarea
-        className="flex-1 p-4 resize-none focus:outline-none font-mono text-sm text-slate-700"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Start typing your markdown..."
+        className="flex-1 p-6 resize-none focus:outline-none font-mono text-sm leading-relaxed text-slate-800"
+        value={value}
+        onChange={onChange}
+        onPaste={onPaste}
+        placeholder="Start typing markdown..."
+        spellCheck="false"
       />
-
-      {/* Page Limit Progress Bar */}
-      <div className="h-1 w-full bg-slate-100">
-        <div 
-          className={`h-full transition-all duration-300 ${progress > 90 ? 'bg-red-500' : 'bg-indigo-500'}`} 
-          style={{ width: `${Math.min(progress, 100)}%` }}
-        />
+      <div className="p-3 text-[11px] font-semibold uppercase tracking-wider bg-slate-50 text-slate-500 border-t border-gray-100 flex justify-between items-center">
+        <span>
+            Words: <span className={wordCount > wordLimit ? "text-red-500" : "text-slate-700"}>{wordCount}</span> / {wordLimit}
+        </span>
+        {wordCount > wordLimit && <span className="text-red-500">Word limit reached</span>}
       </div>
     </div>
   );

@@ -1,78 +1,45 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios'; 
 
-function LoginPage() {
-    // 1. Define State for inputs
+function LoginPage({ isOpen, onClose }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const navigate = useNavigate();
 
-    const HandleSubmit = (e) => {
-        e.preventDefault(); // Prevents page refresh
-        console.log("Logging in with:", email, password);
-        // Add your axios.post() logic here later
+    if (!isOpen) return null;
+
+    const HandleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                onClose();
+                window.location.reload(); // To refresh App.jsx state
+            }
+        } catch (err) {
+            setError("Invalid credentials");
+        }
     };
 
     return (
-        // PAGE CONTAINER: Centered, Light Gray Background
-        <div className="min-h-screen flex items-center justify-center bg-slate-100">
-            
-            {/* LOGIN CARD: White, Shadow, Rounded */}
-            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md border border-slate-200">
-                
-                {/* HEADER */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-slate-800">Welcome Back</h1>
-                    <p className="text-slate-500 text-sm mt-2">Please login to your account</p>
-                </div>
-
-                <form onSubmit={HandleSubmit} className="space-y-6">
-                    
-                    {/* EMAIL INPUT */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Email Address
-                        </label>
-                        <input 
-                            name='email'
-                            type="email"
-                            required
-                            placeholder='name@example.com'
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        />
-                    </div>
-
-                    {/* PASSWORD INPUT */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Password
-                        </label>
-                        <input 
-                            name='password'
-                            type="password"
-                            required
-                            placeholder='••••••••'
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        />
-                    </div>
-
-                    {/* SUBMIT BUTTON */}
-                    <button 
-                        type="submit"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-md transition-colors duration-200 shadow-sm"
-                    >
-                        Login
-                    </button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose}></div>
+            <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md z-10 relative">
+                <button onClick={onClose} className="absolute top-4 right-4 text-slate-400">✕</button>
+                <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+                {error && <div className="text-red-500 mb-4 text-sm">{error}</div>}
+                <form onSubmit={HandleSubmit} className="space-y-4">
+                    <input type="email" placeholder="Email" className="w-full p-3 border rounded-xl" value={email} onChange={e => setEmail(e.target.value)} required />
+                    <input type="password" placeholder="Password" className="w-full p-3 border rounded-xl" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">Login</button>
                 </form>
-
-                {/* FOOTER LINK */}
-                <p className="text-center text-sm text-slate-500 mt-6">
-                    Don't have an account? 
-                    <a href="/register" className="text-blue-600 hover:underline ml-1">Sign up</a>
+                <p className="mt-4 text-center text-sm">
+                    New here? <Link to="/register" onClick={onClose} className="text-blue-600">Create Account</Link>
                 </p>
-
             </div>
         </div>
     );
