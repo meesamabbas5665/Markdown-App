@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-// Import the controller
-const authController = require('../controllers/authController');
 
-// Ensure 'register' exists in the controller
-router.post('/register', authController.register); 
-router.post('/login', authController.login);
+// 1. Use curly braces to pull the functions out of the controller
+const { register, login } = require('../controllers/authController');
+
+// 2. Ensure both 'register' and 'login' exist. 
+// If either is undefined, the server will crash on these lines.
+router.post('/register', register); 
+router.post('/login', login); 
 
 module.exports = router;
